@@ -1,0 +1,16 @@
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const {ForestGame}=require('../dist/core.js');
+const {PETS}=require('../dist/pets.js');
+const M=require('../dist/vendor/matter.min.js');
+function fresh(events=[]){const g=new ForestGame({random:()=>.2,onEvent:e=>events.push(e)});for(const b of [...g.pets])g.removeBody(b);return g;}
+function step(g,count=180){for(let i=0;i<count;i++)g.step();}
+test('matching pets merge once and award the next level score',()=>{const ev=[],g=fresh(ev);g.spawn(0,218,505);g.spawn(0,246,505);step(g,4);assert.equal(g.pets.length,1);assert.equal(g.pets[0].petLevel,1);assert.equal(g.score,PETS[1].points);assert.equal(ev.filter(e=>e.type==='merge').length,1);});
+test('a contact involving three matching pets never consumes a body twice',()=>{const g=fresh();g.spawn(0,200,505);g.spawn(0,230,505);g.spawn(0,260,505);step(g,5);assert.deepEqual(g.pets.map(b=>b.petLevel).sort(),[0,1]);assert.equal(g.score,25);});
+test('different pets keep their levels after settling and stay inside the basket',()=>{const g=fresh();g.spawn(0,65,119);g.spawn(1,390,119);step(g,300);assert.equal(g.pets.length,2);assert.equal(g.score,0);for(const b of g.pets){assert.ok(b.position.y+PETS[b.petLevel].radius<537);assert.ok(b.position.x>40&&b.position.x<420);}});
+test('drop uses the held pet and cooldown prevents repeated rapid drops',()=>{const g=fresh();g.setAim(-100);assert.equal(g.aim,60);assert.equal(g.drop(),true);assert.equal(g.drop(),false);assert.equal(g.pets.length,1);step(g,40);assert.equal(g.drop(),true);});
+test('pause freezes physics and resumes from the same simulation time',()=>{const g=fresh();g.drop();g.pause();const t=g.time,y=g.pets[0].position.y;step(g);assert.equal(g.time,t);assert.equal(g.pets[0].position.y,y);g.resume();g.step();assert.ok(g.time>t);});
+test('tools swap pets, remove only the selected body, and stop at their limit',()=>{const g=fresh();g.current=0;g.next=2;assert.ok(g.useTool('swap'));assert.equal(g.current,2);assert.equal(g.next,0);g.useTool('swap');g.useTool('swap');assert.equal(g.useTool('swap'),false);const b=g.spawn(1,220,450);g.useTool('remove');assert.equal(g.pickRemove(0,0),false);assert.equal(g.tools.remove,2);assert.equal(g.pickRemove(b.position.x,b.position.y),true);assert.equal(g.pets.length,0);assert.equal(g.tools.remove,1);assert.equal(g.useTool('shake'),false);});
+test('danger line has grace for falling pets and ends after sustained overflow',()=>{const ev=[],g=fresh(ev);const b=g.spawn(1,220,170);M.Body.setStatic(b,true);step(g,100);assert.equal(g.state,'playing');step(g,220);assert.equal(g.state,'ended');assert.equal(ev.filter(e=>e.type==='end').length,1);});
+test('merging level eight unlocks the forest guardian and wins',()=>{const ev=[],g=fresh(ev);g.spawn(7,150,430);g.spawn(7,310,430);step(g,5);assert.equal(g.state,'won');assert.equal(g.pets[0].petLevel,8);assert.equal(g.score,1000);assert.ok(ev.find(e=>e.type==='end'&&e.won));});
+test('a long normal round remains finite and respects body containment',()=>{const g=fresh();for(let i=0;i<65&&g.state==='playing';i++){g.setAim(85+(i*67)%290);g.drop();step(g,70);}assert.ok(g.score>0);for(const b of g.pets){assert.ok(Number.isFinite(b.position.x));assert.ok(Number.isFinite(b.position.y));assert.ok(b.position.y<550);assert.ok(b.position.x>10&&b.position.x<450);}});

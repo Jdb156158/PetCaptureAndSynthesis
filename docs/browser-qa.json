@@ -1,0 +1,28 @@
+{
+  "desktop": "drop/merge, pause/resume, swap, shake, remove, help, collection, audio, restart, persistence passed",
+  "mobile": "real touch drag and release merged successfully",
+  "score": 1625,
+  "responsive": [
+    {
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "width": 1024,
+      "overflow": false
+    },
+    {
+      "width": 1440,
+      "overflow": false
+    }
+  ],
+  "errors": []
+}
